@@ -1,0 +1,249 @@
+:root {
+    --background : #14bdac;
+    --line-accent : #00a192;
+    --text : #3cdcd4;
+    --secondary : #97B5B7;
+    --selected : #00B09F;
+    --text-white : #F2F3F3;
+    --text-dark : #005249;
+    --dark-grey : #535454;
+}   
+
+* {
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+}
+body {
+    margin : 0px;
+}
+
+.wrapper {
+    display : flex;
+    flex-direction : column;
+    height : 100vh;
+    width : 100vw;
+}
+
+.header {
+    zoom : 0.8;
+    flex : none;
+    padding : 10px;
+}
+
+.player-info {
+    display : grid;
+    grid-template-rows : repeat(5,minmax(35px , min-content));
+    grid-template-columns : repeat(3,min-content);
+    gap : 5px;
+}
+
+.player-symbol.circle,.player-symbol.x {
+    height : 60px;
+    width : 60px;
+    background-color: var(--selected);
+}
+
+.player-symbol.circle img {
+    filter: invert(100%) sepia(0%) saturate(3137%) hue-rotate(26deg) brightness(96%) contrast(99%);
+    background-color: rgb(0,0,0,0);
+    height : 110%;
+}
+
+
+.player-info * {
+    background-color: var(--secondary);
+    display : flex;
+    align-items : center;
+    justify-content : center;
+    font-weight : bold;
+    color : var(--text-white);
+}
+
+.difficulty {
+    padding : 0px 5px;
+}
+
+.player-name {
+    grid-column : 2/4;
+    background-color: var(--selected);
+}
+
+.human {
+    grid-column : 1/-1;
+}
+
+.cpu {
+    grid-column : 1/3;
+    grid-row : 3/6;
+}
+.game {
+    background-color: var(--background);
+    flex : 1;
+}
+
+.header {
+    display : flex;
+    justify-content : space-between;
+    padding : 10px;
+}
+
+.scoreboard * {
+    text-align : center;
+    font-weight : bold;
+}
+
+.scoreboard {
+    display : flex;
+    flex-direction : column;
+    align-items : center;
+}
+
+
+
+.score-container {
+    color : var(--text-white);
+    background-color: var(--selected);
+    padding : 20px 100px;
+    margin-bottom : 20px;
+    display : flex;
+    flex-direction: column;
+    align-items: center;
+
+}
+
+.reset-button {
+    border-radius : 10px;
+    background-color : white;
+    color : var(--text-dark);
+    font-size : 25px;
+    justify-self : end;
+    margin-top : auto;
+}
+
+.score {
+    display : flex;
+    gap : 14px;
+}
+
+.score>* {
+    font-size : 25px;
+}
+
+.score-title {
+    margin-bottom : 20px;
+    font-size : 25px;
+}
+
+.winner-announcer * {
+    font-size : 16px;
+    margin-bottom : 15px;
+}
+
+.winner-announcer p {
+    font-size : 30px;
+    color : var(--text-dark);
+}
+
+.winner-announcer button {
+    padding : 12px 35px;
+    border-radius : 20px;
+    background-color: var(--selected);
+    color : var(--text-white);
+    border : none;
+    font-size : 23px;
+}
+
+p {
+    margin : 0px;
+}
+
+.game {
+    display : flex;
+    align-items : center;
+    justify-content : center;
+}
+.table {
+    display : grid;
+    justify-content : center;
+    grid-template-columns: 1fr 1fr 1fr;
+    height : 80%;
+    gap : 2%;
+    background-color: var(--line-accent);
+}
+
+.cell {
+    background-color : var(--background)
+}
+
+.player-symbol.x img {
+    height : 150%;
+    filter: invert(33%) sepia(0%) saturate(0%) hue-rotate(216deg) brightness(97%) contrast(94%);   
+    background-color: rgba(0,0,0,0);
+}
+
+.circle-inside {
+    height : 100%;
+    width : 100%;
+    background-image : url("icons/circle-thick.svg");
+    background-repeat : no-repeat;
+    background-position: center;
+    background-size : 165%;
+    filter: invert(97%) sepia(6%) saturate(366%) hue-rotate(153deg) brightness(107%) contrast(91%);
+}
+
+.x-inside {
+    height : 100%;
+    width : 100%;
+    background-image : url("icons/x-thick.svg");
+    background-repeat : no-repeat;
+    background-position: center;
+    background-size : 260%;
+    filter: invert(33%) sepia(0%) saturate(0%) hue-rotate(216deg) brightness(97%) contrast(94%);
+}
+
+.x img{
+    filter: invert(33%) sepia(0%) saturate(0%) hue-rotate(216deg) brightness(97%) contrast(94%);   
+}
+
+button {
+    display: inline-block;
+    border: none;
+    padding: 1rem 2rem;
+    margin: 0;
+    text-decoration: none;
+    background: #0069ed;
+    color: #ffffff;
+    font-family: sans-serif;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.player-info.button:hover,
+.player-info.button:focus {
+    background: #0053ba;
+}
+
+.winner-announcer {
+    display : none;
+}
+
+button:focus {
+    outline: none;
+    outline-offset: -4px;
+}
+
+button:active {
+    transform: scale(0.99);
+}
+
+#name-input {
+    display : inline;
+}
+
+input {
+    all : unset;
+    text-align : center;
+}
