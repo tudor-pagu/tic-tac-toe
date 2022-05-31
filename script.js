@@ -234,9 +234,6 @@ let CPUmoveHandler = (function () {
             let delay = 500 + Math.floor(Math.random() * 500);
             awaitingAImove = true;
             
-            if (gameState.players[getTurn(gameState)].difficulty == 2) {
-                delay = 0;
-            }
             setTimeout(makeCPUmove, delay);
         }
     }
