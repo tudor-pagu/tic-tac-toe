@@ -61,18 +61,21 @@ const Elements = (function () {
 })();
 
 
-function gameStateFactory(players, score, isAcceptingInput, gameOverInfo, boardState) {
-    return { players, score, isAcceptingInput, gameOverInfo, boardState };
+function gameStateFactory(players, score, isAcceptingInput, gameOverInfo, boardState , hoverState) {
+    return { players, score, isAcceptingInput, gameOverInfo, boardState, hoverState };
 }
 
-function getTurn(gameState) {
-    let nrOfPlacements = gameState.boardState.reduce((previousValue, currentRow) => {
+function getNrOfPlacements(gameState) {
+    return gameState.boardState.reduce((previousValue, currentRow) => {
         return previousValue + currentRow.reduce((prev, currentCell) => {
             let val = 0;
             if (currentCell == 1 || currentCell == 2) val = 1;
             return prev + val;
-        } , 0);
+        }, 0);
     }, 0);
+}
+function getTurn(gameState) {
+    let nrOfPlacements = getNrOfPlacements(gameState);
     return nrOfPlacements % 2;
 }
 
@@ -138,7 +141,11 @@ function render(gameState) {
     (function () {
         if (gameState.gameOverInfo.isGameOver) {
             Elements.winnerAnnouncer.style['display'] = 'block';
-            Elements.winnerAnnouncement.textContent = `${gameState.players[gameState.gameOverInfo.winner].name} Has Won!`;
+            if (gameState.gameOverInfo.winner === 2) {
+                Elements.winnerAnnouncement.textContent = `Its a draw!`;
+            } else {
+                Elements.winnerAnnouncement.textContent = `${gameState.players[gameState.gameOverInfo.winner].name} Has Won!`;
+            }
         } else {
             Elements.winnerAnnouncer.style['display'] = 'none';
         }
@@ -159,11 +166,21 @@ function render(gameState) {
             if (gameState.boardState[i][j] === 2) {
                 cell.replaceChildren(Elements.getoFill());
             }
+
+            if (gameState.hoverState[i][j] === 1 && gameState.boardState[i][j] === 0 && checkIfAcceptingInput(gameState)) {
+                let playerMark;
+                if (getTurn(gameState) === 0) {
+                    playerMark = Elements.xGhostFill;
+                } else {
+                    playerMark = Elements.oGhostFill;
+                }
+                cell.replaceChildren(playerMark);
+            }
         });
     })();
 
     ///render reset button
-    (function() {
+    (function () {
         if (gameState.gameOverInfo.isGameOver) {
             Elements.resetButton.style['display'] = "none";
         } else {
@@ -176,25 +193,70 @@ function render(gameState) {
 }
 
 ///ai move handler
-let CPUmoveHandler = (function() {
+
+function checkDraw(gameState) {
+    return !checkWin(gameState) && getNrOfPlacements(gameState) === gameState.boardState.reduce((prev, current) => prev + current.length, 0);
+}
+
+
+///1 -> player 1 wins from this position if both play optimally
+///-1 -> player 2 wins from this position if both play optimally
+///0 -> it is a draw from this position if both play optimally
+function evaluateWinner(gameState) {
+
+    ///if there is a win on the board, it's assumed that the player who just moved wins,
+    ///since that will be the case for all valid positions
+    const lastMoved = 1 - getTurn(gameState);
+    if (checkWin(gameState)) {
+        if (lastMoved === 0) return 1;
+        else return -1;
+    }
+
+    if (checkDraw(gameState)) {
+        return 0;
+    }
+
+    const freePositions = getFreePositions(gameState);
+    const possibleResults = freePositions.map(([row,col]) => 
+        evaluateWinner(makePlay(gameState, row, col))
+    );
+
+    if (getTurn(gameState) === 0) { /// we're player 1, so we want to pick a situation with the maximum
+        return Math.max(...possibleResults);
+    } else {
+        return Math.min(...possibleResults);
+    }
+}
+let CPUmoveHandler = (function () {
     let awaitingAImove = false;
     function tryToMakeMove(gameState) {
         if (!gameState.players[getTurn(gameState)].isHuman && !gameState.gameOverInfo.isGameOver && !awaitingAImove) {
             let delay = 500 + Math.floor(Math.random() * 500);
             awaitingAImove = true;
-            setTimeout(makeCPUmove , delay);
+            let curentTime = Date.now();
+            let move = getAImove(gameState);
+            let computationTime = Date.now() - curentTime;
+            delay = Math.max(0 , delay - computationTime);
+            setTimeout(makeCPUmove.bind(this,move), delay);
         }
     }
 
-    function makeCPUmove() {
+    function getAwaitingAImove() {
+        return awaitingAImove;
+    }
+
+    function makeCPUmove(move) {
         awaitingAImove = false;
-        [row,col] = getAImove(gameState);
-        gameState = makePlay(gameState , row, col);
-        render(gameState);
+        if (!gameState.players[getTurn(gameState)].isHuman && !gameState.gameOverInfo.isGameOver && !awaitingAImove) {
+            [row, col] = move;
+            gameState = makePlay(gameState, row, col);
+            render(gameState);
+        }
     }
 
     return {
-        tryToMakeMove
+        tryToMakeMove,
+        getAwaitingAImove,
     }
 })();
 
@@ -239,44 +301,54 @@ function changeBoardAt(board, row, col, newVal) {
 
 function mouseEnterCell(gameState, row, col) {
     const newGameState = JSON.parse(JSON.stringify(gameState));
-    newGameState.boardState[row][col].isHovering = true;
+    newGameState.hoverState[row][col] = 1;
     return newGameState;
 }
 
 
 function mouseLeaveCell(gameState, row, col) {
     const newGameState = JSON.parse(JSON.stringify(gameState));
-    newGameState.boardState[row][col].isHovering = false;
+    newGameState.hoverState[row][col] = 0;
     return newGameState;
 }
 
 function checkWin(gameState) { /// just checks for some win, doesn't matter who won
-    let checkSame = function(row) {
-        return row.every( (v) => v === row[0] ) && row[0] != 0;
+    let checkSame = function (row) {
+        return row.every((v) => v === row[0]) && row[0] != 0;
     }
-    let someHorizontal = [0,1,2].map((row) => {
+    let someHorizontal = [0, 1, 2].map((row) => {
         return checkSame(gameState.boardState[row]); /// true if it is all the same
     }).reduce((previous, current) => previous || current);
-    
-    let someVertical = [0,1,2].map((col) => {
+
+    let someVertical = [0, 1, 2].map((col) => {
         return checkSame(gameState.boardState.map((row) => row[col])); /// true if it is all the same
     }).reduce((previous, current) => previous || current);
 
-    let mainDiagonal = checkSame(gameState.boardState.map((row , i) => row[i]));
+    let mainDiagonal = checkSame(gameState.boardState.map((row, i) => row[i]));
 
-    let secondaryDiagonal =  checkSame(gameState.boardState.map((row , i) => row[2 - i]));
+    let secondaryDiagonal = checkSame(gameState.boardState.map((row, i) => row[2 - i]));
     return someHorizontal || someVertical || mainDiagonal || secondaryDiagonal;
 }
+
+
+///returns the game state if there was a move made at cell (row,col)
 function makePlay(gameState, row, col) {
     let turn = getTurn(gameState);
     let newGameState = JSON.parse(JSON.stringify(gameState));
     newGameState.boardState[row][col] = turn + 1;
     if (checkWin(newGameState)) {
         newGameState.gameOverInfo = {
-            isGameOver : true,
-            winner : turn,
+            isGameOver: true,
+            winner: turn,
         }
         newGameState.score[turn] = gameState.score[turn] + 1;
+    }
+
+    if (checkDraw(newGameState)) {
+        newGameState.gameOverInfo = {
+            isGameOver: true,
+            winner: 2, /// 2 means draw
+        }
     }
     return newGameState;
 }
@@ -295,7 +367,8 @@ let gameState = gameStateFactory(
     [0, 0],
     true,
     { isGameOver: false, winner: null },
-    boardStateFactory()
+    boardStateFactory(),
+    boardStateFactory(),
 );
 
 ///add all the event listeners
@@ -342,26 +415,81 @@ function resetGame(gameState) {
     let newGameState = JSON.parse(JSON.stringify(gameState));
     newGameState.boardState = boardStateFactory();
     newGameState.gameOverInfo = {
-        isGameOver : false,
-        winner : null,
+        isGameOver: false,
+        winner: null,
     }
     return newGameState;
 }
 
+///returns an array of [col,row] pairs representing the free positions
+function getFreePositions(gameState) {
+    return gameState.boardState.map((arr, i) => arr.map((val, j) => { return { pos: [i, j], val: val } }).filter(val => val.val === 0)).map(x => x.map(y => y.pos)).reduce((a, b) => a.concat(b));
+}
 function getAImove(gameState) {
+
+    ///returns a [row,col] pair which is just a random move on a free spot
     function getRandomMove(gameState) {
         ///transform game state into an array of [i,j] pairs signifying the position of free elements
-        let freePositions = gameState.boardState.map((arr,i) => arr.map((val,j) => {return {pos : [i,j] , val : val}}).filter(val => val.val === 0)).map(x => x.map(y =>y.pos)).reduce((a,b) => a.concat(b));
+        let freePositions = getFreePositions(gameState);
         let choice = Math.floor(Math.random() * freePositions.length);
         return freePositions[choice];
     }
 
+    ///checks if any move immediately wins, in which case moves there.
+    ///if not, checks if any cell would cause, if the opponent moved there, would cause an immediate loss. If so, moves there
+    ///otherwise, moves at a random spot.
+    function getIntermediateMove(gameState) {
+        const freePositions = getFreePositions(gameState);
+        const immediateWins = freePositions.filter( ([row,col]) => {
+            return makePlay(gameState, row, col).gameOverInfo.isGameOver === true;
+        });
+        if (immediateWins.length > 0) {
+            return immediateWins[0];
+        } else {
+            const randomMoveCandidate = getRandomMove(gameState);
+            const candidateGameState = makePlay(gameState, randomMoveCandidate[0] , randomMoveCandidate[1]);
+            const immediateLoses = getFreePositions(candidateGameState).filter(([row,col]) => {
+                let possibleGameOverInfo = makePlay(candidateGameState, row, col).gameOverInfo;
+                return possibleGameOverInfo.isGameOver === true && possibleGameOverInfo.winner != 2;
+            });
+            if (immediateLoses.length > 0) {
+                return immediateLoses[0];
+            } else {
+                return randomMoveCandidate;
+            }
+        }
+    }
+
+    function getBestMove(gameState) {
+        let freePositions = getFreePositions(gameState);
+        let bestMove = freePositions.reduce((prev, curent) => {
+            let prevEvaluation = evaluateWinner(makePlay(gameState, prev[0] , prev[1]));
+            let curentEvaluation = evaluateWinner(makePlay(gameState, curent[0] , curent[1]));
+            let condition; /// condition that needs to be true to have prev be better than current
+            if (getTurn(gameState) === 0) { /// we're player 1, so we want the maximum outcome
+                condition = prevEvaluation > curentEvaluation;
+            } else {
+                condition = prevEvaluation < curentEvaluation
+            }
+            if (condition) {
+                return prev;
+            } else {
+                return curent;
+            }
+        });
+        return bestMove;
+    }
     let difficulty = gameState.players[getTurn(gameState)].difficulty;
     if (difficulty === 0) {
         ///get random move
         return getRandomMove(gameState);
+    } else if (difficulty == 1) {
+        return getIntermediateMove(gameState);
+    } else if (difficulty == 2) {
+        return getBestMove(gameState);
     }
 }
+
 
 Elements.cells.forEach((cell, index) => {
     let row = Math.floor((index) / 3);
@@ -369,20 +497,14 @@ Elements.cells.forEach((cell, index) => {
     cell.row = row;
     cell.col = col;
     cell.addEventListener('mouseenter', (e) => {
-        if (gameState.boardState[row][col] == 0 && checkIfAcceptingInput(gameState)) {
-            let playerMark;
-            if (getTurn(gameState) === 0) {
-                playerMark = Elements.xGhostFill;
-            } else {
-                playerMark = Elements.oGhostFill;
-            }
-            cell.replaceChildren(playerMark);
+        if (gameState.boardState[row][col] == 0) {
+            gameState = mouseEnterCell(gameState, row, col);
+            render(gameState);
         }
     });
     cell.addEventListener('mouseleave', (e) => {
-        if (gameState.boardState[row][col] == 0) {
-            cell.replaceChildren();
-        }
+        gameState = mouseLeaveCell(gameState, row, col);
+        render(gameState);
     });
 
     cell.addEventListener('click', (e) => {
@@ -392,12 +514,12 @@ Elements.cells.forEach((cell, index) => {
         }
     });
 
-    Elements.playAgain.addEventListener('click' , (e) => {
+    Elements.playAgain.addEventListener('click', (e) => {
         gameState = resetGame(gameState);
         render(gameState);
     });
 
-    Elements.resetButton.addEventListener('click' , (e) => {
+    Elements.resetButton.addEventListener('click', (e) => {
         gameState = resetGame(gameState);
         render(gameState);
     });
