@@ -354,6 +354,8 @@ function checkIfAcceptingInput(gameState) {
     return gameState.players[getTurn(gameState)].isHuman && gameState.gameOverInfo.isGameOver == false;
 }
 ///setup goes here, is run on page load
+
+
 window.onresize = (e) => {
     Elements.table.style['width'] = `${Elements.table.clientHeight}px`;
 };
