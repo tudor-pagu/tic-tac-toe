@@ -233,11 +233,11 @@ let CPUmoveHandler = (function () {
         if (!gameState.players[getTurn(gameState)].isHuman && !gameState.gameOverInfo.isGameOver && !awaitingAImove) {
             let delay = 500 + Math.floor(Math.random() * 500);
             awaitingAImove = true;
-            let curentTime = Date.now();
-            let move = getAImove(gameState);
-            let computationTime = Date.now() - curentTime;
-            delay = Math.max(0 , delay - computationTime);
-            setTimeout(makeCPUmove.bind(this,move), delay);
+            
+            if (gameState.players[getTurn(gameState)].difficulty == 2) {
+                delay = 0;
+            }
+            setTimeout(makeCPUmove, delay);
         }
     }
 
@@ -245,10 +245,10 @@ let CPUmoveHandler = (function () {
         return awaitingAImove;
     }
 
-    function makeCPUmove(move) {
+    function makeCPUmove() {
         awaitingAImove = false;
         if (!gameState.players[getTurn(gameState)].isHuman && !gameState.gameOverInfo.isGameOver && !awaitingAImove) {
-            [row, col] = move;
+            [row, col] = getAImove(gameState);
             gameState = makePlay(gameState, row, col);
             render(gameState);
         }
@@ -425,7 +425,11 @@ function resetGame(gameState) {
 function getFreePositions(gameState) {
     return gameState.boardState.map((arr, i) => arr.map((val, j) => { return { pos: [i, j], val: val } }).filter(val => val.val === 0)).map(x => x.map(y => y.pos)).reduce((a, b) => a.concat(b));
 }
+
+let boardStateMemoization = {};
+
 function getAImove(gameState) {
+
 
     ///returns a [row,col] pair which is just a random move on a free spot
     function getRandomMove(gameState) {
@@ -461,6 +465,11 @@ function getAImove(gameState) {
     }
 
     function getBestMove(gameState) {
+        const boardStateStringified = JSON.stringify(gameState.boardState);
+        if (boardStateStringified in boardStateMemoization) {
+            return boardStateMemoization[boardStateStringified];
+        }
+
         let freePositions = getFreePositions(gameState);
         let bestMove = freePositions.reduce((prev, curent) => {
             let prevEvaluation = evaluateWinner(makePlay(gameState, prev[0] , prev[1]));
@@ -477,6 +486,8 @@ function getAImove(gameState) {
                 return curent;
             }
         });
+
+        boardStateMemoization[boardStateStringified] = bestMove;
         return bestMove;
     }
     let difficulty = gameState.players[getTurn(gameState)].difficulty;
